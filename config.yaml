@@ -1,0 +1,3 @@
+database_url: mongodb://localhost
+database_name: paragliding
+tracks_collection_name: tracks
