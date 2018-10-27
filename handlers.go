@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/globalsign/mgo/bson"
@@ -132,15 +133,60 @@ func trackIDFieldGetHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func tickerLatestGetHandler(w http.ResponseWriter, r *http.Request) {
+	ids := db.getAllIds()
 
+	if len(ids) <= 0 {
+		fmt.Printf("No tracks in database")
+		return
+	}
+
+	var latestID bson.ObjectId
+
+	for _, id := range ids {
+		if id.Time().After(latestID.Time()) {
+			latestID = id
+		}
+	}
+
+	// Although it's required in the assignment to use milliseconds, it's also required
+	// to use ID's time, which only stores with second precision, hence this will print
+	// with second precision
+
+	fmt.Fprintf(w, latestID.Time().String())
 }
 
 func tickerGetHandler(w http.ResponseWriter, r *http.Request) {
+	ticker, ok := replyWithTicker()
 
+	if !ok {
+		w.WriteHeader(http.StatusNoContent)
+		w.Write([]byte("No content found"))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(ticker)
 }
 
 func tickerTimestampGetHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	timestamp, err := strconv.Atoi(vars["timestamp"])
 
+	if err != nil {
+		http.Error(w, "Coudln't parse timestamp", http.StatusBadRequest)
+		return
+	}
+
+	ticker, ok := replyWithTicker(int64(timestamp))
+
+	if !ok {
+		w.WriteHeader(http.StatusNoContent)
+		w.Write([]byte("No content found"))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(ticker)
 }
 
 func webhookNewtrackPostHandler(w http.ResponseWriter, r *http.Request) {

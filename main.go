@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,13 +12,17 @@ import (
 
 var startTime time.Time
 var db tracksMongoDB
+var tickerCap *int
 
 func getPort() string {
 	return ":8080"
 }
 
 func main() {
-	fmt.Println("Running paragliding")
+	tickerCap = flag.Int("tickerCap", 5, "an int")
+	flag.Parse()
+
+	fmt.Printf("Running paragliding with tickerCap %d\n", *tickerCap)
 	startTime = time.Now()
 	db.init()
 

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"time"
 
 	"gopkg.in/yaml.v2"
 
@@ -89,6 +90,11 @@ func (db *tracksMongoDB) count() int {
 }
 
 func (db *tracksMongoDB) get(id bson.ObjectId) (track, bool) {
+	if db.count() <= 0 {
+		fmt.Print("No entries i database")
+		return track{}, false
+	}
+
 	session, err := mgo.Dial(db.DatabaseURL)
 	if err != nil {
 		panic(err)
@@ -113,6 +119,11 @@ func (db *tracksMongoDB) get(id bson.ObjectId) (track, bool) {
 }
 
 func (db *tracksMongoDB) getAllIds() []bson.ObjectId {
+	if db.count() <= 0 {
+		fmt.Print("No entries i database")
+		return []bson.ObjectId{}
+	}
+
 	session, err := mgo.Dial(db.DatabaseURL)
 	if err != nil {
 		panic(err)
@@ -134,6 +145,11 @@ func (db *tracksMongoDB) getAllIds() []bson.ObjectId {
 }
 
 func (db *tracksMongoDB) getField(field string, id bson.ObjectId) (string, bool) {
+	if db.count() <= 0 {
+		fmt.Print("No entries i database")
+		return "NO ENTRIES", false
+	}
+
 	session, err := mgo.Dial(db.DatabaseURL)
 	if err != nil {
 		panic(err)
@@ -163,4 +179,54 @@ func (db *tracksMongoDB) getField(field string, id bson.ObjectId) (string, bool)
 	}
 
 	return track.getField(field)
+}
+
+func (db *tracksMongoDB) getTracksSince(count int, since time.Time) []track {
+	if db.count() <= 0 {
+		fmt.Print("No entries in database")
+		return []track{}
+	}
+
+	session, err := mgo.Dial(db.DatabaseURL)
+	if err != nil {
+		panic(err)
+	}
+	defer session.Close()
+
+	tracksIter := session.DB(db.DatabaseName).C(db.TracksCollectionName).Find(bson.M{}).Iter()
+	defer tracksIter.Close()
+
+	var tracks []track
+	var track track
+	i := 0
+	for tracksIter.Next(&track) && i < count {
+		if track.ID.Time().After(since) {
+			tracks = append(tracks, track)
+			i++
+		}
+	}
+
+	return tracks
+}
+
+func (db *tracksMongoDB) getLatest() track {
+	if db.count() <= 0 {
+		fmt.Print("No entries i database")
+		return track{}
+	}
+
+	session, err := mgo.Dial(db.DatabaseURL)
+	if err != nil {
+		panic(err)
+	}
+	defer session.Close()
+
+	var track track
+	err = session.DB(db.DatabaseName).C(db.TracksCollectionName).Find(nil).Skip(db.count() - 1).One(&track)
+	if err != nil {
+		fmt.Printf("Error in getLatest(): %v", err)
+		return track
+	}
+
+	return track
 }
