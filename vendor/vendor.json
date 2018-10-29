@@ -1,0 +1,85 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "O1v7ZY6psIKMtE2Ma/hp1myzM2o=",
+			"path": "github.com/globalsign/mgo",
+			"revision": "eeefdecb41b842af6dc652aaea4026e8403e62df",
+			"revisionTime": "2018-10-15T13:59:52Z"
+		},
+		{
+			"checksumSHA1": "zdy6XflmESAiFmyptSqpUMfXSyo=",
+			"path": "github.com/globalsign/mgo/bson",
+			"revision": "eeefdecb41b842af6dc652aaea4026e8403e62df",
+			"revisionTime": "2018-10-15T13:59:52Z"
+		},
+		{
+			"checksumSHA1": "//bXQG4HblBwxHJDIW/PklXAxu0=",
+			"path": "github.com/globalsign/mgo/internal/json",
+			"revision": "eeefdecb41b842af6dc652aaea4026e8403e62df",
+			"revisionTime": "2018-10-15T13:59:52Z"
+		},
+		{
+			"checksumSHA1": "loubUcDO2QAStKIlVd7DqSeoEaw=",
+			"path": "github.com/globalsign/mgo/internal/sasl",
+			"revision": "eeefdecb41b842af6dc652aaea4026e8403e62df",
+			"revisionTime": "2018-10-15T13:59:52Z"
+		},
+		{
+			"checksumSHA1": "xjfEsfN7ho6dDOVeUQJhW4KzD2I=",
+			"path": "github.com/globalsign/mgo/internal/scram",
+			"revision": "eeefdecb41b842af6dc652aaea4026e8403e62df",
+			"revisionTime": "2018-10-15T13:59:52Z"
+		},
+		{
+			"checksumSHA1": "91Tuiml7EH3M8giuc67liORLUE8=",
+			"path": "github.com/golang/geo/r1",
+			"revision": "476085157cff9aaeef4d4f124649436542d4114a",
+			"revisionTime": "2018-10-08T08:51:00Z"
+		},
+		{
+			"checksumSHA1": "IQvAdnayIiKDyxMYBkMAUtStuPs=",
+			"path": "github.com/golang/geo/r2",
+			"revision": "476085157cff9aaeef4d4f124649436542d4114a",
+			"revisionTime": "2018-10-08T08:51:00Z"
+		},
+		{
+			"checksumSHA1": "Z9lm/pDQVZeNJu93e8B3/N05Ezk=",
+			"path": "github.com/golang/geo/r3",
+			"revision": "476085157cff9aaeef4d4f124649436542d4114a",
+			"revisionTime": "2018-10-08T08:51:00Z"
+		},
+		{
+			"checksumSHA1": "IHAp4p0e4Kt7UZfL5HHYABUJ8PI=",
+			"path": "github.com/golang/geo/s1",
+			"revision": "476085157cff9aaeef4d4f124649436542d4114a",
+			"revisionTime": "2018-10-08T08:51:00Z"
+		},
+		{
+			"checksumSHA1": "+7424Bq+54+vpOM7RdZEInvm1ag=",
+			"path": "github.com/golang/geo/s2",
+			"revision": "476085157cff9aaeef4d4f124649436542d4114a",
+			"revisionTime": "2018-10-08T08:51:00Z"
+		},
+		{
+			"checksumSHA1": "5NQxGXStdEEDvT6IPRtJk7Qg+GQ=",
+			"path": "github.com/gorilla/mux",
+			"revision": "521ea7b17d02faf8d3afea6737573942ceac59c5",
+			"revisionTime": "2018-10-24T02:08:00Z"
+		},
+		{
+			"checksumSHA1": "pHOBAFXNfJ1FX5JwsjcbQ8Rg5Bc=",
+			"path": "github.com/marni/goigc",
+			"revision": "71f274dd21ef320ccbb6c6271c7df7fd8a908779",
+			"revisionTime": "2018-09-09T23:15:54Z"
+		},
+		{
+			"checksumSHA1": "ZSWoOPUNRr5+3dhkLK3C4cZAQPk=",
+			"path": "gopkg.in/yaml.v2",
+			"revision": "5420a8b6744d3b0345ab293f6fcba19c978f1183",
+			"revisionTime": "2018-03-28T19:50:20Z"
+		}
+	],
+	"rootPath": "github.com/sindrenk/paragliding"
+}
