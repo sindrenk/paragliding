@@ -65,7 +65,7 @@ func trackPostHandler(w http.ResponseWriter, r *http.Request) {
 		dist += trackIGC.Points[i-1].Distance(trackIGC.Points[i])
 	}
 
-	id, err := db.add(track{
+	id, err := db.addTrack(track{
 		Hdate:       trackIGC.Date,
 		Pilot:       trackIGC.Pilot,
 		Glider:      trackIGC.GliderType,
@@ -89,13 +89,13 @@ func trackPostHandler(w http.ResponseWriter, r *http.Request) {
 
 func trackGetHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(db.getAllIds())
+	json.NewEncoder(w).Encode(db.getTrackAllIds())
 }
 
 func trackIDGetHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
-	track, ok := db.get(bson.ObjectIdHex(vars["trackid"]))
+	track, ok := db.getTrack(bson.ObjectIdHex(vars["trackid"]))
 
 	if !ok {
 		http.NotFound(w, r)
@@ -114,7 +114,7 @@ func trackIDGetHandler(w http.ResponseWriter, r *http.Request) {
 func trackIDFieldGetHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
-	track, ok := db.get(bson.ObjectIdHex(vars["trackid"]))
+	track, ok := db.getTrack(bson.ObjectIdHex(vars["trackid"]))
 
 	if !ok {
 		http.NotFound(w, r)
@@ -133,7 +133,7 @@ func trackIDFieldGetHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func tickerLatestGetHandler(w http.ResponseWriter, r *http.Request) {
-	ids := db.getAllIds()
+	ids := db.getTrackAllIds()
 
 	if len(ids) <= 0 {
 		fmt.Printf("No tracks in database")
@@ -190,17 +190,70 @@ func tickerTimestampGetHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func webhookNewtrackPostHandler(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var webhookRequest webhook
+
+	err := decoder.Decode(&webhookRequest)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	id, err := db.addWebhook(webhookRequest)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprint(w, id.Hex())
 
 }
 
 func webhookNewtrackIDGet(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
 
+	webhook, ok := db.getWebhook(bson.ObjectIdHex(vars["webhookid"]))
+
+	if !ok {
+		http.Error(w, "NOT FOUND", http.StatusNotFound)
+		return
+	}
+
+	js, err := json.Marshal(webhook)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+}
+
+func webhookNewtrackIDDelete(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	webhook, ok := db.getWebhook(bson.ObjectIdHex(vars["webhookid"]))
+	ok = ok && db.deleteWebhook(bson.ObjectIdHex(vars["webhookid"]))
+
+	if !ok {
+		http.Error(w, "NOT FOUND", http.StatusNotFound)
+		return
+	}
+
+	js, err := json.Marshal(webhook)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
 }
 
 func adminTrackcountGet(w http.ResponseWriter, r *http.Request) {
-
+	fmt.Fprintf(w, strconv.Itoa(db.countTracks()))
+	w.WriteHeader(http.StatusOK)
 }
 
 func adminTracksDelete(w http.ResponseWriter, r *http.Request) {
-
+	db.deleteAllTracks()
+	w.WriteHeader(http.StatusOK)
 }

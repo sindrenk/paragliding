@@ -12,9 +12,10 @@ import (
 )
 
 type tracksMongoDB struct {
-	DatabaseURL          string `yaml:"database_url"`
-	DatabaseName         string `yaml:"database_name"`
-	TracksCollectionName string `yaml:"tracks_collection_name"`
+	DatabaseURL            string `yaml:"database_url"`
+	DatabaseName           string `yaml:"database_name"`
+	TracksCollectionName   string `yaml:"tracks_collection_name"`
+	WebhooksCollectionName string `yaml:"webhooks_collection_name"`
 }
 
 func (db *tracksMongoDB) init() {
@@ -36,7 +37,7 @@ func (db *tracksMongoDB) init() {
 	}
 	defer session.Close()
 
-	index := mgo.Index{
+	trackIndex := mgo.Index{
 		Key:        []string{"track_src_url"},
 		Unique:     true,
 		DropDups:   true,
@@ -44,13 +45,26 @@ func (db *tracksMongoDB) init() {
 		Sparse:     true,
 	}
 
-	err = session.DB(db.DatabaseName).C(db.TracksCollectionName).EnsureIndex(index)
+	err = session.DB(db.DatabaseName).C(db.TracksCollectionName).EnsureIndex(trackIndex)
+	if err != nil {
+		panic(err)
+	}
+
+	webhookIndex := mgo.Index{
+		Key:        []string{"webhook_URL"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+		Sparse:     true,
+	}
+
+	err = session.DB(db.DatabaseName).C(db.WebhooksCollectionName).EnsureIndex(webhookIndex)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (db *tracksMongoDB) add(t track) (bson.ObjectId, error) {
+func (db *tracksMongoDB) addTrack(t track) (bson.ObjectId, error) {
 	session, err := mgo.Dial(db.DatabaseURL)
 	if err != nil {
 		panic(err)
@@ -59,21 +73,23 @@ func (db *tracksMongoDB) add(t track) (bson.ObjectId, error) {
 
 	err = session.DB(db.DatabaseName).C(db.TracksCollectionName).Insert(t)
 	if err != nil {
-		fmt.Printf("Error in add(): %v", err.Error())
+		fmt.Printf("Error in addTrack(): %v", err.Error())
 		return "error", err
 	}
 
 	track := track{}
 	err = session.DB(db.DatabaseName).C(db.TracksCollectionName).Find(bson.M{"track_src_url": t.TrackSrcURL}).One(&track)
 	if err != nil {
-		fmt.Printf("Error in add(): %v", err.Error())
+		fmt.Printf("Error in addTrack(): %v", err.Error())
 		return "error", err
 	}
+
+	invokeWebhooks()
 
 	return track.ID, nil
 }
 
-func (db *tracksMongoDB) count() int {
+func (db *tracksMongoDB) countTracks() int {
 	session, err := mgo.Dial(db.DatabaseURL)
 	if err != nil {
 		panic(err)
@@ -89,9 +105,9 @@ func (db *tracksMongoDB) count() int {
 	return count
 }
 
-func (db *tracksMongoDB) get(id bson.ObjectId) (track, bool) {
-	if db.count() <= 0 {
-		fmt.Print("No entries i database")
+func (db *tracksMongoDB) getTrack(id bson.ObjectId) (track, bool) {
+	if db.countTracks() <= 0 {
+		fmt.Print("No entries in database")
 		return track{}, false
 	}
 
@@ -104,7 +120,7 @@ func (db *tracksMongoDB) get(id bson.ObjectId) (track, bool) {
 	track := track{}
 	found := false
 
-	for _, validID := range db.getAllIds() {
+	for _, validID := range db.getTrackAllIds() {
 		if validID == id {
 			found = true
 			break
@@ -118,9 +134,9 @@ func (db *tracksMongoDB) get(id bson.ObjectId) (track, bool) {
 	return track, found
 }
 
-func (db *tracksMongoDB) getAllIds() []bson.ObjectId {
-	if db.count() <= 0 {
-		fmt.Print("No entries i database")
+func (db *tracksMongoDB) getTrackAllIds() []bson.ObjectId {
+	if db.countTracks() <= 0 {
+		fmt.Print("No entries in database")
 		return []bson.ObjectId{}
 	}
 
@@ -144,9 +160,9 @@ func (db *tracksMongoDB) getAllIds() []bson.ObjectId {
 	return IDList
 }
 
-func (db *tracksMongoDB) getField(field string, id bson.ObjectId) (string, bool) {
-	if db.count() <= 0 {
-		fmt.Print("No entries i database")
+func (db *tracksMongoDB) getTrackField(field string, id bson.ObjectId) (string, bool) {
+	if db.countTracks() <= 0 {
+		fmt.Print("No entries in database")
 		return "NO ENTRIES", false
 	}
 
@@ -160,7 +176,7 @@ func (db *tracksMongoDB) getField(field string, id bson.ObjectId) (string, bool)
 
 	found := false
 
-	for _, validID := range db.getAllIds() {
+	for _, validID := range db.getTrackAllIds() {
 		if validID == id {
 			found = true
 			break
@@ -182,7 +198,7 @@ func (db *tracksMongoDB) getField(field string, id bson.ObjectId) (string, bool)
 }
 
 func (db *tracksMongoDB) getTracksSince(count int, since time.Time) []track {
-	if db.count() <= 0 {
+	if db.countTracks() <= 0 {
 		fmt.Print("No entries in database")
 		return []track{}
 	}
@@ -209,9 +225,9 @@ func (db *tracksMongoDB) getTracksSince(count int, since time.Time) []track {
 	return tracks
 }
 
-func (db *tracksMongoDB) getLatest() track {
-	if db.count() <= 0 {
-		fmt.Print("No entries i database")
+func (db *tracksMongoDB) getLatestTrack() track {
+	if db.countTracks() <= 0 {
+		fmt.Print("No entries in database")
 		return track{}
 	}
 
@@ -222,11 +238,114 @@ func (db *tracksMongoDB) getLatest() track {
 	defer session.Close()
 
 	var track track
-	err = session.DB(db.DatabaseName).C(db.TracksCollectionName).Find(nil).Skip(db.count() - 1).One(&track)
+	err = session.DB(db.DatabaseName).C(db.TracksCollectionName).Find(nil).Skip(db.countTracks() - 1).One(&track)
 	if err != nil {
 		fmt.Printf("Error in getLatest(): %v", err)
 		return track
 	}
 
 	return track
+}
+
+func (db *tracksMongoDB) deleteAllTracks() {
+	session, err := mgo.Dial(db.DatabaseURL)
+	if err != nil {
+		panic(err)
+	}
+	defer session.Close()
+
+	session.DB(db.DatabaseName).C(db.TracksCollectionName).RemoveAll(bson.M{})
+}
+
+func (db *tracksMongoDB) addWebhook(wh webhook) (bson.ObjectId, error) {
+	session, err := mgo.Dial(db.DatabaseURL)
+	if err != nil {
+		panic(err)
+	}
+	defer session.Close()
+
+	wh.LatestInvokedTrack = db.countTracks()
+
+	err = session.DB(db.DatabaseName).C(db.WebhooksCollectionName).Insert(wh)
+	if err != nil {
+		fmt.Printf("Error in addWebhook(): %v", err.Error())
+		return "error", err
+	}
+
+	webhook := webhook{}
+	err = session.DB(db.DatabaseName).C(db.WebhooksCollectionName).Find(bson.M{"webhook_URL": wh.URL}).One(&webhook)
+	if err != nil {
+		fmt.Printf("Error in addWebhook(): %v", err.Error())
+		return "error", err
+	}
+
+	return webhook.ID, nil
+}
+
+func (db *tracksMongoDB) getWebhooksToInvoke() []webhookResponse {
+	session, err := mgo.Dial(db.DatabaseURL)
+	if err != nil {
+		panic(err)
+	}
+	defer session.Close()
+
+	webhooksIter := session.DB(db.DatabaseName).C(db.WebhooksCollectionName).Find(bson.M{}).Iter()
+	defer webhooksIter.Close()
+
+	var webhookResponses []webhookResponse
+	var webhook webhook
+
+	allTrackIDs := db.getTrackAllIds()
+	for webhooksIter.Next(&webhook) {
+		timeBefore := time.Now()
+		if webhook.LatestInvokedTrack+webhook.MinTriggerValue >= len(allTrackIDs) {
+			var trackIDs []bson.ObjectId
+			latestTrack, ok := db.getTrack(allTrackIDs[len(allTrackIDs)-1])
+			if !ok {
+				fmt.Println("No tracks in database")
+				break
+			}
+
+			for i := webhook.LatestInvokedTrack; i < webhook.LatestInvokedTrack+webhook.MinTriggerValue; i++ {
+				trackIDs = append(trackIDs, allTrackIDs[i])
+			}
+			webhookResponses = append(webhookResponses, webhookResponse{
+				TLatest:    int64(latestTrack.ID.Time().Unix() * 1000),
+				Tracks:     trackIDs,
+				Processing: int64(time.Since(timeBefore).Seconds() * 1000),
+				URL:        webhook.URL,
+			})
+		}
+	}
+
+	return webhookResponses
+}
+
+func (db *tracksMongoDB) getWebhook(id bson.ObjectId) (webhook, bool) {
+	session, err := mgo.Dial(db.DatabaseURL)
+	if err != nil {
+		panic(err)
+	}
+	defer session.Close()
+
+	webhook := webhook{}
+
+	err = session.DB(db.DatabaseName).C(db.WebhooksCollectionName).Find(bson.M{"_id": id}).One(&webhook)
+	if err != nil {
+		return webhook, false
+	}
+
+	return webhook, true
+}
+
+func (db *tracksMongoDB) deleteWebhook(id bson.ObjectId) bool {
+	session, err := mgo.Dial(db.DatabaseURL)
+	if err != nil {
+		panic(err)
+	}
+	defer session.Close()
+
+	err = session.DB(db.DatabaseName).C(db.WebhooksCollectionName).Remove(bson.M{"_id": id})
+
+	return err == nil
 }

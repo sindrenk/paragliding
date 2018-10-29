@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -15,16 +16,21 @@ var db tracksMongoDB
 var tickerCap *int
 
 func getPort() string {
-	return ":8080"
+	if os.Getenv("PORT") == "" {
+		return ":8080"
+	} else {
+		return os.Getenv("PORT")
+	}
 }
 
 func main() {
 	tickerCap = flag.Int("tickerCap", 5, "an int")
 	flag.Parse()
 
+	db.init()
+
 	fmt.Printf("Running paragliding with tickerCap %d\n", *tickerCap)
 	startTime = time.Now()
-	db.init()
 
 	r := mux.NewRouter()
 	r.HandleFunc("/paragliding", rootHandler)
@@ -37,7 +43,8 @@ func main() {
 	r.HandleFunc("/paragliding/api/ticker", tickerGetHandler).Methods("GET")
 	r.HandleFunc("/paragliding/api/ticker/{timestamp}", tickerTimestampGetHandler).Methods("GET")
 	r.HandleFunc("/paragliding/api/webhook/new_track", webhookNewtrackPostHandler).Methods("POST")
-	r.HandleFunc("/paragliding/webhook/new_track/{webhookid}", webhookNewtrackIDGet).Methods("GET")
+	r.HandleFunc("/paragliding/api/webhook/new_track/{webhookid}", webhookNewtrackIDGet).Methods("GET")
+	r.HandleFunc("/paragliding/api/webhook/new_track/{webhookid}", webhookNewtrackIDDelete).Methods("DELETE")
 	r.HandleFunc("/admin/api/tracks_count", adminTrackcountGet).Methods("GET")
 	r.HandleFunc("/admin/api/tracks", adminTracksDelete).Methods("DELETE")
 

@@ -30,7 +30,7 @@ func replyWithTicker(timestamp ...int64) (ticker, bool) {
 		return ticker, false
 	}
 
-	ticker.TLatest = db.getLatest().ID.Time().Unix()
+	ticker.TLatest = db.getLatestTrack().ID.Time().Unix()
 	ticker.TStart = tracks[0].ID.Time().Unix()
 	ticker.TStop = tracks[0].ID.Time().Unix()
 
