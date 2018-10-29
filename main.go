@@ -32,7 +32,7 @@ func main() {
 	fmt.Printf("Running paragliding with tickerCap %d\n", *tickerCap)
 	startTime = time.Now()
 
-	r := mux.NewRouter()
+	r := mux.NewRouter().StrictSlash(false)
 	r.HandleFunc("/paragliding", rootHandler)
 	r.HandleFunc("/paragliding/api", infoGetHandler).Methods("GET")
 	r.HandleFunc("/paragliding/api/track", trackPostHandler).Methods("POST")
@@ -48,13 +48,6 @@ func main() {
 	r.HandleFunc("/admin/api/tracks_count", adminTrackcountGet).Methods("GET")
 	r.HandleFunc("/admin/api/tracks", adminTracksDelete).Methods("DELETE")
 
-	srv := &http.Server{
-		Handler:      r,
-		Addr:         "127.0.0.1" + getPort(),
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
-	}
-
-	log.Fatal(srv.ListenAndServe())
+	log.Fatal(http.ListenAndServe(getPort(), r))
 
 }
